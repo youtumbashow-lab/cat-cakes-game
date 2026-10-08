@@ -603,4 +603,162 @@
     // ===== Пирожное =====
     function drawItem(it) {
         const chute = CHUTES[it.slot];
-        const pos = chutePos(chute, Math
+        const pos = chutePos(chute, Math.min(it.t, 1));
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(it.rot);
+
+        // Тень
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(0, ITEM_SIZE * 0.55, ITEM_SIZE * 0.4, ITEM_SIZE * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Эмодзи
+        ctx.font = `${ITEM_SIZE}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ITEM_TYPES[it.type].emoji, 0, 0);
+
+        ctx.restore();
+    }
+
+    // polyfill roundRect
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (typeof r === 'number') r = [r, r, r, r];
+            this.beginPath();
+            this.moveTo(x + r[0], y);
+            this.arcTo(x + w, y, x + w, y + h, r[1]);
+            this.arcTo(x + w, y + h, x, y + h, r[2]);
+            this.arcTo(x, y + h, x, y, r[3]);
+            this.arcTo(x, y, x + w, y, r[0]);
+            this.closePath();
+            return this;
+        };
+    }
+
+    // ===== HUD =====
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const missedEl = document.getElementById('missed');
+    function updateHUD() {
+        scoreEl.textContent = game.score;
+        livesEl.textContent = game.lives;
+        missedEl.textContent = game.missed;
+    }
+
+    // ===== Overlay =====
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayText = document.getElementById('overlay-text');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+
+    function showOverlay(title, text, btnText) {
+        overlayTitle.textContent = title;
+        overlayText.textContent = text;
+        startBtn.textContent = btnText;
+        overlay.classList.remove('hidden');
+    }
+    function hideOverlay() {
+        overlay.classList.add('hidden');
+    }
+
+    // ===== Старт/конец =====
+    function startGame() {
+        game.running = true;
+        game.paused = false;
+        game.score = 0;
+        game.lives = 3;
+        game.missed = 0;
+        game.frame = 0;
+        game.spawnDelay = 65;
+        game.fallSpeed = 0.006;
+        game.caught = 0;
+        items = [];
+        particles = [];
+        splats = [];
+        cat.pose = 0;
+        updateHUD();
+        hideOverlay();
+        pauseBtn.textContent = '⏸';
+    }
+
+    function gameOver() {
+        game.running = false;
+        saveScore(game.score);
+        showOverlay(
+            'Игра окончена! 🐱',
+            `Счёт: ${game.score}\nПропущено: ${game.missed}\nРекорд: ${getBestScore()}`,
+            'Играть снова'
+        );
+    }
+
+    function togglePause() {
+        if (!game.running) return;
+        game.paused = !game.paused;
+        pauseBtn.textContent = game.paused ? '▶' : '⏸';
+    }
+
+    // ===== Рекорд =====
+    let sdk = null;
+    function saveScore(score) {
+        try {
+            if (sdk && sdk.getStorage) {
+                sdk.getStorage().then(storage => {
+                    const best = parseInt(storage.getItem('best') || '0', 10);
+                    if (score > best) storage.setItem('best', String(score));
+                }).catch(() => {
+                    const best = parseInt(localStorage.getItem('best') || '0', 10);
+                    if (score > best) localStorage.setItem('best', String(score));
+                });
+            } else {
+                const best = parseInt(localStorage.getItem('best') || '0', 10);
+                if (score > best) localStorage.setItem('best', String(score));
+            }
+        } catch (e) {}
+    }
+    function getBestScore() {
+        try { return localStorage.getItem('best') || '0'; } catch (e) { return '0'; }
+    }
+
+    // ===== Кнопки =====
+    startBtn.addEventListener('click', startGame);
+    pauseBtn.addEventListener('click', togglePause);
+    pauseBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        togglePause();
+    }, { passive: false });
+
+    // ===== Цикл =====
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // ===== Старт =====
+    YaGames.init().then(_sdk => {
+        sdk = _sdk;
+        if (sdk.features && sdk.features.LoadingAPI) {
+            sdk.features.LoadingAPI.ready();
+        }
+        showOverlay(
+            '🐱 Кот ловит пирожные',
+            'Пирожные катятся по желобам!\nПоворачивай кота и подставляй корзину.',
+            'Играть'
+        );
+        loop();
+    }).catch(() => {
+        showOverlay(
+            '🐱 Кот ловит пирожные',
+            'Пирожные катятся по желобам!\nПоворачивай кота и подставляй корзину.',
+            'Играть'
+        );
+        loop();
+    });
+})();
