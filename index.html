@@ -9,15 +9,19 @@
 <body>
     <div id="game-container">
         <canvas id="game"></canvas>
+
         <div id="hud">
             <div class="hud-item">🏆 <span id="score">0</span></div>
             <div class="hud-item">❤️ <span id="lives">3</span></div>
-            <div class="hud-item">⭐ <span id="level">1</span></div>
+            <div class="hud-item">📉 <span id="missed">0</span></div>
+            <button id="pause-btn" title="Пауза (P / Esc)">⏸</button>
         </div>
+
         <div id="overlay" class="hidden">
-            <h1 id="overlay-title">Кот ловит пирожные</h1>
-            <p id="overlay-text">Собери как можно больше пирожных!</p>
+            <h1 id="overlay-title">🐱 Кот ловит пирожные</h1>
+            <p id="overlay-text">Лови пирожные корзиной! Не пропускай.</p>
             <button id="start-btn">Играть</button>
+            <p class="hint">Управление: ← → или A / D · Пауза: P / Esc</p>
         </div>
     </div>
     <script src="sdk.js"></script>
